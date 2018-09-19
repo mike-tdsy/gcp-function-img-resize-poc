@@ -20,6 +20,7 @@ const exec = require('child_process').exec;
 const fs = require('fs');
 const path = require('path');
 const storage = require('@google-cloud/storage')();
+const gm = require('gm').subClass({imageMagick: true});
 
 const bucket = "mikeh";
 const option = "!"
@@ -45,14 +46,27 @@ exports.createImageSizesFromOriginal = (req, res) => {
 
   console.log(`Starting to process File: ${bucketFilePath} width=${width} height=${height}`);
 
-  createImage(sFile, width, height, res)
-    .catch((err) => {
-      console.error(`After createImage: Failed to create image`, err);
-      return Promise.reject(err);
-    })
-    .then(() => {
-      res.send(`Images created successfully`);
-    });
+  let stream = sFile.createReadStream()
+
+  stream.on('error', function(err) {
+    console.error(err);
+    res.sendStatus(err.code).end(err);
+  });
+
+  gm(stream)
+    .resize(width, height, ">")
+    .quality(quality)
+    .stream()
+    .pipe(res);
+
+  // createImage(sFile, width, height, res)
+  //   .catch((err) => {
+  //     console.error(`After createImage: Failed to create image`, err);
+  //     return Promise.reject(err);
+  //   })
+  //   .then(() => {
+  //     res.send(`Images created successfully`);
+  //   });
 
 };
 // [END functions_imagemagick_analyze]
